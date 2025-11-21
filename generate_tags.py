@@ -17,17 +17,17 @@ OUTPUT_DIR = "giving_tree_output"
 PHOTO_ZIP_DIR = "cats"
 NUM_OUTPUT_ZIPS = 3
 
-PHOTO_BOX = (382, 410, 642, 670)  # 260x260 centered
+PHOTO_BOX = (382, 510, 642, 770)  # 260x260 centered
 
-NAME_POS = (260, 880)
-AGE_POS = (260, 960)
-
-WISHLIST_START_POS = (150, 1080)
-WISHLIST_LINE_HEIGHT = 100
+NAME_POS = (335, 863)
+AGE_POS = (335, 985)
+WISHLIST_START_POS = (115, 1160)
+WISHLIST_LINE_HEIGHT = 125
 
 # Fonts — replace with any TTF you prefer
-FONT_NAME = ImageFont.truetype("Arial.ttf", 40)
-FONT_WISHLIST = ImageFont.truetype("Arial.ttf", 36)
+FONT_NAME = ImageFont.truetype("Arial.ttf", 75)
+FONT_AGE = ImageFont.truetype("Arial.ttf", 55)
+FONT_WISHLIST = ImageFont.truetype("Arial.ttf", 55)
 
 # -----------------------------
 # HELPER FUNCTIONS
@@ -171,7 +171,7 @@ def render_card(cat, photo_index) -> Image.Image:
 
     # Name & Age
     draw.text(NAME_POS, f"{cat['name']}", fill="black", font=FONT_NAME)
-    draw.text(AGE_POS, f"{cat['age']}", fill="black", font=FONT_NAME)
+    draw.text(AGE_POS, f"{cat['age']}", fill="black", font=FONT_AGE)
 
     # Wishlist
     wishlist_text = ", ".join(cat["wishlist"])
