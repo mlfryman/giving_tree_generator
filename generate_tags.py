@@ -90,8 +90,7 @@ def load_photo(photo_name: str, index: Dict[str, Tuple[str, str]]) -> Optional[I
 def paste_cat_photo(base_img, photo_name, photo_index):
     cat_img = load_photo(photo_name, photo_index)
     if cat_img is None:
-        print(f"Warning - Photo not found: {photo_name}. Skipping photo.")
-        return base_img  # just return the template without the photo
+        return None
     try:
         w = PHOTO_BOX[2] - PHOTO_BOX[0]
         h = PHOTO_BOX[3] - PHOTO_BOX[1]
@@ -114,6 +113,13 @@ def chunk_cats(cats, num_archives):
     chunk_size = max(1, math.ceil(len(cats) / num_archives))
     return [cats[i : i + chunk_size] for i in range(0, len(cats), chunk_size)]
 
+def photo_exists(photo_name: str, index: Dict[str, Tuple[str, str]]) -> bool:
+    if not photo_name:
+        return False
+    if photo_name in index:
+        return True
+    return os.path.exists(os.path.join(PHOTO_ZIP_DIR, photo_name))
+
 def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
     """Render all tags and write them into multiple zip files without 
     saving loose PNGs.
@@ -121,7 +127,15 @@ def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    chunks = chunk_cats(cats, num_archives)
+    valid_cats = []
+    for cat in cats:
+        photo_name = cat.get("photo", "")
+        if not photo_exists(photo_name, photo_index):
+            print(f"Skipping {cat['name']} - photo not found ({photo_name})")
+            continue
+        valid_cats.append(cat)
+
+    chunks = chunk_cats(valid_cats, num_archives)
     if not chunks:
         print("No cats found to generate.")
         return
@@ -132,6 +146,8 @@ def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for cat in chunk:
                 img = render_card(cat, photo_index)
+                if img is None:
+                    continue
                 with BytesIO() as buf:
                     img.save(buf, format="PNG")
                     zipf.writestr(f"{cat['name']}.png", buf.getvalue())
@@ -142,12 +158,16 @@ def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
 # -----------------------------
 
 def render_card(cat, photo_index) -> Image.Image:
-    """Render a single tag as a PIL Image."""
+    """Render a single tag as a Pillow Image."""
     base = Image.open(TEMPLATE_PATH).convert("RGB")
     draw = ImageDraw.Draw(base)
 
     # Photo
-    base = paste_cat_photo(base, cat["photo"], photo_index)
+    base_with_photo = paste_cat_photo(base, cat["photo"], photo_index)
+    if base_with_photo is None:
+        print(f"Skipping {cat['name']} - missing photo {cat['photo']}")
+        return None
+    base = base_with_photo
 
     # Name & Age
     draw.text(NAME_POS, f"{cat['name']}", fill="black", font=FONT_NAME)

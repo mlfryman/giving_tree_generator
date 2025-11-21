@@ -1,4 +1,6 @@
 .DS_Store
+cats/*.jpeg
+giving_tree_output/*.png 
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

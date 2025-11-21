@@ -57,7 +57,7 @@ for archive_name in os.listdir(input_folder):
 
                 # Build output path first to skip work when already converted
                 inner_name = os.path.splitext(os.path.basename(info.filename))[0]
-                output_name = f"{archive_base}_{inner_name}.jpeg"
+                output_name = f"{inner_name}.jpeg"
                 output_path = os.path.join(output_folder, output_name)
 
                 if os.path.exists(output_path):
