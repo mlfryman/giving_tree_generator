@@ -26,9 +26,9 @@ WISHLIST_LINE_HEIGHT = 125
 
 # Fonts — replace with any TTF you prefer
 FONT_NAME = ImageFont.truetype("Arial.ttf", 75)
-FONT_AGE = ImageFont.truetype("Arial.ttf", 55)
+FONT_AGE = ImageFont.truetype("Arial.ttf", 55) 
 FONT_WISHLIST = ImageFont.truetype("Arial.ttf", 55)
-
+ 
 # -----------------------------
 # HELPER FUNCTIONS
 # -----------------------------
