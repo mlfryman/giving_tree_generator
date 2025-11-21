@@ -21,7 +21,7 @@ PHOTO_BOX = (382, 510, 642, 770)  # 260x260 centered
 
 NAME_POS = (335, 863)
 AGE_POS = (335, 985)
-WISHLIST_START_POS = (115, 1160)
+WISHLIST_START_POS = (115, 500) #1160
 WISHLIST_LINE_HEIGHT = 125
 
 # Fonts — replace with any TTF you prefer
@@ -193,8 +193,8 @@ def load_cats_from_csv(csv_path):
             cats.append({
                 "name": row["name"],
                 "age": row["age"],
-                "wishlist": wishlist_items,
-                "photo": row["photo"]
+                "photo": row["photo"],
+                "wishlist": wishlist_items
             })
 
         print(f"Generated: {row}")
