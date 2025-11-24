@@ -20,7 +20,7 @@ WISHLIST_ITEMS = wishlist_df["Formatted"].tolist()
 
 # ---- RANDOM PICK FUNCTION ----
 def random_wishlist():
-    items = random.sample(WISHLIST_ITEMS, random.randint(2, 2))
+    items = random.sample(WISHLIST_ITEMS, random.randint(2, 3))
     return ", ".join(items)
 
 # ---- ASSIGN TO EACH CAT ----

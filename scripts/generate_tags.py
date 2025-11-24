@@ -3,7 +3,7 @@ import math
 import os
 import zipfile
 from io import BytesIO
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List, TypedDict
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 
@@ -20,22 +20,50 @@ NUM_OUTPUT_ZIPS = 3
 
 PHOTO_BOX = (382, 510, 642, 770)  # 260x260 centered
 
-NAME_POS = (335, 863)
-AGE_POS = (335, 985)
+NAME_POS = (335, 855)
+AGE_POS = (335, 975)
 WISHLIST_START_POS = (115, 1167)
-WISHLIST_LINE_HEIGHT = 70
+WISHLIST_LINE_HEIGHT = 52
 
 # Fonts
 FONT_NAME = ImageFont.truetype(r"./assets/Arial.ttf", 75)
-FONT_AGE = ImageFont.truetype(r"./assets/Arial.ttf", 55) 
+FONT_AGE = ImageFont.truetype(r"./assets/Arial.ttf", 55)
 FONT_WISHLIST = ImageFont.truetype(r"./assets/Arial.ttf", 40)
- 
+
+
+# -----------------------------
+# TYPES
+# -----------------------------
+
+class CatRow(TypedDict):
+    """Strongly typed representation of a single CSV cat record.
+
+    Keys:
+        name (str): Cat's name
+        age (str): Age string formatted externally
+        photo (str): photo filename
+        wishlist (List[str]): comma-split wishlist
+    """
+    name: str
+    age: str
+    photo: str
+    wishlist: List[str]
+
+
 # -----------------------------
 # HELPER FUNCTIONS
 # -----------------------------
 
 def build_photo_index() -> Dict[str, Tuple[str, str]]:
-    """Create a map of photo filename -> (zip_path, inner_path)."""
+    """Scan all ZIP files in PHOTO_ZIP_DIR and collect a mapping of photo filenames
+    to a tuple indicating which ZIP and internal ZIP file path the photo resides in.
+
+    Returns:
+        Dict[str, Tuple[str, str]]:
+            A mapping where:
+                key   = filename only (e.g., "cat1.jpg")
+                value = (absolute zip path, internal zip member path)
+    """
     index: Dict[str, Tuple[str, str]] = {}
 
     if not os.path.isdir(PHOTO_ZIP_DIR):
@@ -62,8 +90,20 @@ def build_photo_index() -> Dict[str, Tuple[str, str]]:
 
     return index
 
+
 def load_photo(photo_name: str, index: Dict[str, Tuple[str, str]]) -> Optional[Image.Image]:
-    """Load a photo from zip or disk. If missing, return placeholder."""
+    """Load a photo either from ZIP or disk, fall back to placeholder if missing.
+
+    Args:
+        photo_name (str): Photo filename.
+        index (Dict[str, Tuple[str, str]]): lookup map.
+
+    Returns:
+        Optional[Image.Image]:
+            RGB Pillow image if found,
+            placeholder otherwise,
+            None only if placeholder fails.
+    """
     
     # Try ZIP
     if photo_name in index:
@@ -97,10 +137,22 @@ def load_photo(photo_name: str, index: Dict[str, Tuple[str, str]]) -> Optional[I
         print(f"ERROR: Could not load placeholder image {PLACEHOLDER_PATH}: {e}")
         return None
 
-def paste_cat_photo(base_img, photo_name, photo_index):
+
+def paste_cat_photo(base_img: Image.Image, photo_name: str, photo_index: Dict[str, Tuple[str, str]]) -> Optional[Image.Image]:
+    """Paste resized cat photo on base template.
+
+    Args:
+        base_img (Image.Image): image to paste into
+        photo_name (str): filename from CSV
+        photo_index: lookup map
+
+    Returns:
+        Optional[Image.Image]: modified base image
+    """
     cat_img = load_photo(photo_name, photo_index)
     if cat_img is None:
         return None
+
     try:
         w = PHOTO_BOX[2] - PHOTO_BOX[0]
         h = PHOTO_BOX[3] - PHOTO_BOX[1]
@@ -108,23 +160,35 @@ def paste_cat_photo(base_img, photo_name, photo_index):
         base_img.paste(cat_img, (PHOTO_BOX[0], PHOTO_BOX[1]))
     except Exception as e:
         print(f"Error processing photo {photo_name}: {e}. Skipping photo.")
+
     return base_img
 
-def add_wrapped_text(draw, start_pos, text, font, line_height):
-    lines = textwrap.wrap(text, width=40)
-    x, y = start_pos
-    for line in lines:
-        draw.text((x, y), line, font=font, fill="black")
-        y += line_height
 
-def chunk_cats(cats, num_archives):
+def chunk_cats(cats: List[CatRow], num_archives: int) -> List[List[CatRow]]:
+    """Divide cats list into N equal chunks.
+
+    Args:
+        cats: list of CatRow
+        num_archives: desired chunk count
+
+    Returns:
+        list of sublists
+    """
     if not cats:
         return []
     chunk_size = max(1, math.ceil(len(cats) / num_archives))
-    return [cats[i : i + chunk_size] for i in range(0, len(cats), chunk_size)]
+    return [cats[i:i + chunk_size] for i in range(0, len(cats), chunk_size)]
 
-def cleanup_jpegs(photo_zip_dir):
-    """Remove JPEGs in the cats directory after zipping tags."""
+
+def cleanup_jpegs(photo_zip_dir: str) -> None:
+    """Remove .jpg/jpeg files after ZIP export.
+
+    Args:
+        photo_zip_dir: dir to clean
+
+    Returns:
+        None
+    """
     if not os.path.isdir(photo_zip_dir):
         return
     removed = 0
@@ -138,12 +202,26 @@ def cleanup_jpegs(photo_zip_dir):
     if removed:
         print(f"Removed {removed} JPEGs from {photo_zip_dir}")
 
-def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
-    """Render all tags and write them into multiple zip files without saving loose PNGs."""
+
+def write_tag_archives(
+    cats: List[CatRow],
+    photo_index: Dict[str, Tuple[str, str]],
+    num_archives: int = NUM_OUTPUT_ZIPS
+) -> None:
+    """Render all tags to PNG buffers and write to multiple archives.
+
+    Args:
+        cats: list of CatRow
+        photo_index: lookup dict
+        num_archives: how many zips
+
+    Returns:
+        None
+    """
+
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
 
-    # No skipping — every cat gets a tag (placeholder if no photo)
     valid_cats = cats
 
     chunks = chunk_cats(valid_cats, num_archives)
@@ -154,40 +232,97 @@ def write_tag_archives(cats, photo_index, num_archives=NUM_OUTPUT_ZIPS):
     for idx, chunk in enumerate(chunks, start=1):
         zip_name = f"giving_tree_tags_part{idx}.zip"
         zip_path = os.path.join(OUTPUT_DIR, zip_name)
+
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for cat in chunk:
-                img = render_card(cat, photo_index)
+                img = render_tag(cat, photo_index)
                 if img is None:
                     continue
                 with BytesIO() as buf:
                     img.save(buf, format="PNG")
                     zipf.writestr(f"{cat['name']}.png", buf.getvalue())
+
         print(f"Wrote {len(chunk)} tags to {zip_path}")
 
-    # Delete jpeg files so only zip files are remaining
     cleanup_jpegs("./output/")
 
 
-# -----------------------------
-# MAIN GENERATION FUNCTION
-# -----------------------------
+def draw_text_box(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    box: Tuple[int, int, int, int],
+    font: ImageFont.FreeTypeFont,
+    min_font_size: int = 24,
+    line_spacing: float = 1.1,
+    fill: str = "black",
+) -> None:
+    """Draw text into a rectangle and shrink automatically to fit."""
 
-def render_card(cat, photo_index) -> Image.Image:
-    """Render a single tag as a Pillow Image."""
+    left, top, right, bottom = box
+    max_width = right - left
+    max_height = bottom - top
+    text = text.strip()
+    current_size = font.size
+
+    while current_size >= min_font_size:
+        test_font = ImageFont.truetype(font.path, current_size)
+        words = text.split()
+        lines = []
+        current_line = ""
+
+        for w in words:
+            test_line = (current_line + " " + w).strip()
+            if test_font.getlength(test_line) <= max_width:
+                current_line = test_line
+            else:
+                lines.append(current_line)
+                current_line = w
+        if current_line:
+            lines.append(current_line)
+
+        line_height = int(test_font.size * line_spacing)
+        total_height = line_height * len(lines)
+
+        if total_height <= max_height:
+            y = top
+            for line in lines:
+                draw.text((left, y), line, font=test_font, fill=fill)
+                y += line_height
+            return
+
+        current_size -= 2
+
+    draw.text((left, top), text, font=font, fill=fill)
+
+
+def render_tag(cat: CatRow, photo_index: Dict[str, Tuple[str, str]]) -> Image.Image:
+    """Build one full tag.
+
+    Args:
+        cat: a structured CatRow
+        photo_index: lookup
+
+    Returns:
+        completed tag image
+    """
     base = Image.open(TEMPLATE_PATH).convert("RGB")
     draw = ImageDraw.Draw(base)
 
-    # Photo (always present — placeholder used if missing)
-    base = paste_cat_photo(base, cat["photo"], photo_index)
+    paste_cat_photo(base, cat["photo"], photo_index)
 
-    # Name & Age
     draw.text(NAME_POS, f"{cat['name']}", fill="black", font=FONT_NAME)
     draw.text(AGE_POS, f"{cat['age']}", fill="black", font=FONT_AGE)
 
-    # Wishlist
     wishlist_text = ", ".join(cat["wishlist"])
-    add_wrapped_text(draw, WISHLIST_START_POS, wishlist_text, FONT_WISHLIST,
-                     WISHLIST_LINE_HEIGHT)
+
+    draw_text_box(
+        draw,
+        wishlist_text,
+        box=(115, 1150, 950, 2000),
+        font=FONT_WISHLIST,
+        min_font_size=34,
+        line_spacing=1.20,
+    )
 
     return base
 
@@ -196,8 +331,17 @@ def render_card(cat, photo_index) -> Image.Image:
 # READ CSV + PROCESS DATA
 # -----------------------------
 
-def load_cats_from_csv(csv_path):
-    cats = []
+def load_cats_from_csv(csv_path: str) -> List[CatRow]:
+    """Load CSV and convert into CatRow objects.
+
+    Args:
+        csv_path: CSV source
+
+    Returns:
+        list of CatRow
+    """
+    cats: List[CatRow] = []
+
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -209,11 +353,11 @@ def load_cats_from_csv(csv_path):
                 "wishlist": wishlist_items
             })
 
-        print(f"Generated: {row}")
+            print(f"Generated: {row}")
     return cats
 
 
-cats = load_cats_from_csv(CSV_PATH)
-photo_index = build_photo_index()
-
-write_tag_archives(cats, photo_index, NUM_OUTPUT_ZIPS)
+if __name__ == "__main__":
+    cats = load_cats_from_csv(CSV_PATH)
+    photo_index = build_photo_index()
+    write_tag_archives(cats, photo_index, NUM_OUTPUT_ZIPS)
