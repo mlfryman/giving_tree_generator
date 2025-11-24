@@ -19,9 +19,10 @@ pip install -r requirements.txt
 
 ### 3. Run Scripts
 ```bash
-python3 convert_images.py
-python3 generate_tags.py
-python3 build_sheets.py
+python3 generate_wishlist.py. # Adds randomly selected items from wishlist csv
+python3 convert_images.py  # Converts all cat images to .jpeg
+python3 generate_tags.py  # Creates giving tree tags
+python3 build_sheets.py. # Builds sheets of giving tree tags, with 3 tags per sheet
 ```
 
 The final output will be the `giving_tree_sheets.pdf` file.
