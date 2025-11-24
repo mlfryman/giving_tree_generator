@@ -3,7 +3,6 @@ import os
 import zipfile
 from PIL import Image
 
-# Path to your folder containing zip files
 input_folder = r"./data/Catio Cats"
 output_folder = r"./data/cats"
 
@@ -74,7 +73,8 @@ for archive_name in os.listdir(input_folder):
                 inner_name = os.path.splitext(os.path.basename(info.filename))[0]
                 output_name = f"{inner_name}.jpeg"
                 output_path = os.path.join(output_folder, output_name)
-
+                if "__MACOSX" in inner_name:
+                    continue
                 if os.path.exists(output_path):
                     print(f"DUPLICATE Skipping {archive_name}:{info.filename},o                                                                                         already exists in ./cats as {output_name}")
                     continue

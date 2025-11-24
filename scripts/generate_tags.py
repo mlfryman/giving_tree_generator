@@ -11,11 +11,11 @@ import textwrap
 # CONFIGURATION
 # -----------------------------
 
-CSV_PATH = "./data/giving_tree_data_wishlist.csv"
-TEMPLATE_PATH = "./assets/giving_tree_template.png"
-PLACEHOLDER_PATH = "./assets/placeholder.jpg"
-OUTPUT_DIR = "./output/"
-PHOTO_ZIP_DIR = "./data/cats"
+CSV_PATH = r"./data/giving_tree_data_wishlist.csv"
+TEMPLATE_PATH = r"./assets/giving_tree_template.png"
+PLACEHOLDER_PATH = r"./assets/placeholder.jpg"
+OUTPUT_DIR = r"./output/"
+PHOTO_ZIP_DIR = r"./data/cats"
 NUM_OUTPUT_ZIPS = 3
 
 PHOTO_BOX = (382, 510, 642, 770)  # 260x260 centered
@@ -26,9 +26,9 @@ WISHLIST_START_POS = (115, 1167)
 WISHLIST_LINE_HEIGHT = 70
 
 # Fonts
-FONT_NAME = ImageFont.truetype("./assets/Arial.ttf", 75)
-FONT_AGE = ImageFont.truetype("./assets/Arial.ttf", 55) 
-FONT_WISHLIST = ImageFont.truetype("./assets/Arial.ttf", 40)
+FONT_NAME = ImageFont.truetype(r"./assets/Arial.ttf", 75)
+FONT_AGE = ImageFont.truetype(r"./assets/Arial.ttf", 55) 
+FONT_WISHLIST = ImageFont.truetype(r"./assets/Arial.ttf", 40)
  
 # -----------------------------
 # HELPER FUNCTIONS
@@ -122,21 +122,6 @@ def chunk_cats(cats, num_archives):
         return []
     chunk_size = max(1, math.ceil(len(cats) / num_archives))
     return [cats[i : i + chunk_size] for i in range(0, len(cats), chunk_size)]
-
-def cleanup_jpegs_in_output():
-    """Remove JPEGs in the output directory after zipping."""
-    if not os.path.isdir(OUTPUT_DIR):
-        return
-    removed = 0
-    for fname in os.listdir(OUTPUT_DIR):
-        if fname.lower().endswith((".jpg", ".jpeg")):
-            try:
-                os.remove(os.path.join(OUTPUT_DIR, fname))
-                removed += 1
-            except Exception as e:
-                print(f"Warning: could not delete {fname}: {e}")
-    if removed:
-        print(f"Removed {removed} JPEGs from {OUTPUT_DIR}")
 
 def cleanup_jpegs(photo_zip_dir):
     """Remove JPEGs in the cats directory after zipping tags."""
